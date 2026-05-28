@@ -3,17 +3,66 @@ const QUEUE_SHEET = "Queue";
 const PAGE_SHEET = "Page Choices";
 const DRIVE_FOLDER_ID = ""; // Optional: put an upload folder ID here.
 const TIMEZONE = "Asia/Bangkok";
-const DEFAULT_STATUS = "DRAFT";
+const DEFAULT_STATUS = "READY";
 
 function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents || "{}");
     const action = payload.action || "list";
-    const result = action === "create" ? createRows(payload) : getQueueData();
+    const result = action === "create"
+      ? createRows(payload)
+      : action === "update"
+        ? updateRow(payload)
+        : getQueueData();
     return jsonOutput({ ok: true, ...result });
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message });
   }
+}
+
+function updateRow(payload) {
+  validatePayload(payload);
+  if (!payload.row_id) {
+    throw new Error("row_id is required.");
+  }
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(QUEUE_SHEET);
+  const values = sheet.getDataRange().getDisplayValues();
+  const headers = values[0];
+  const rowIdIndex = headers.indexOf("row_id");
+  const targetIndex = values.findIndex((row, index) => index > 0 && String(row[rowIdIndex]) === String(payload.row_id));
+
+  if (targetIndex < 1) {
+    throw new Error("Row not found.");
+  }
+
+  const current = rowToObject(headers, values[targetIndex]);
+  if (current.publish_mode !== "SCHEDULED" || current.status !== "READY") {
+    throw new Error("Only READY scheduled rows can be edited.");
+  }
+
+  const fileInfo = uploadFile(payload.file);
+  const item = {
+    ...current,
+    caption: payload.caption,
+    media_type: payload.media_type || fileInfo.mediaType || current.media_type || "text",
+    drive_file_id: fileInfo.id || current.drive_file_id || "",
+    link: fileInfo.url || current.link || "",
+    page_name: payload.page_names[0],
+    scheduled_at: payload.publish_mode === "NOW" ? "" : payload.scheduled_at,
+    timezone: TIMEZONE,
+    status: DEFAULT_STATUS,
+    publish_mode: payload.publish_mode
+  };
+
+  const rowValues = headers.map((header) => item[header] ?? "");
+  sheet.getRange(targetIndex + 1, 1, 1, headers.length).setValues([rowValues]);
+
+  return {
+    updated: true,
+    ...getQueueData()
+  };
 }
 
 function doGet() {
@@ -65,7 +114,7 @@ function createRows(payload) {
       row_id: ids.nextRowId + index,
       content_id: contentId,
       caption: payload.caption,
-      media_type: fileInfo.mediaType || payload.media_type || "text",
+      media_type: payload.media_type || fileInfo.mediaType || "text",
       drive_file_id: fileInfo.id || "",
       link: fileInfo.url || "",
       page_name: pageName,
@@ -105,7 +154,7 @@ function validatePayload(payload) {
 
 function uploadFile(file) {
   if (!file || !file.base64) {
-    return { mediaType: "text" };
+    return {};
   }
 
   const bytes = Utilities.base64Decode(file.base64);
