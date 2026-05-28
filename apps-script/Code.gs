@@ -20,51 +20,6 @@ function doPost(e) {
   }
 }
 
-function updateRow(payload) {
-  validatePayload(payload);
-  if (!payload.row_id) {
-    throw new Error("row_id is required.");
-  }
-
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(QUEUE_SHEET);
-  const values = sheet.getDataRange().getDisplayValues();
-  const headers = values[0];
-  const rowIdIndex = headers.indexOf("row_id");
-  const targetIndex = values.findIndex((row, index) => index > 0 && String(row[rowIdIndex]) === String(payload.row_id));
-
-  if (targetIndex < 1) {
-    throw new Error("Row not found.");
-  }
-
-  const current = rowToObject(headers, values[targetIndex]);
-  if (current.publish_mode !== "SCHEDULED" || current.status !== "READY") {
-    throw new Error("Only READY scheduled rows can be edited.");
-  }
-
-  const fileInfo = uploadFile(payload.file);
-  const item = {
-    ...current,
-    caption: payload.caption,
-    media_type: payload.media_type || fileInfo.mediaType || current.media_type || "text",
-    drive_file_id: fileInfo.id || current.drive_file_id || "",
-    link: fileInfo.url || current.link || "",
-    page_name: payload.page_names[0],
-    scheduled_at: payload.publish_mode === "NOW" ? "" : payload.scheduled_at,
-    timezone: TIMEZONE,
-    status: DEFAULT_STATUS,
-    publish_mode: payload.publish_mode
-  };
-
-  const rowValues = headers.map((header) => item[header] ?? "");
-  sheet.getRange(targetIndex + 1, 1, 1, headers.length).setValues([rowValues]);
-
-  return {
-    updated: true,
-    ...getQueueData()
-  };
-}
-
 function doGet() {
   return jsonOutput({ ok: true, ...getQueueData() });
 }
@@ -77,10 +32,10 @@ function jsonOutput(data) {
 
 function getQueueData() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const queueSheet = ss.getSheetByName(QUEUE_SHEET);
-  const pageSheet = ss.getSheetByName(PAGE_SHEET);
+  const queueSheet = getRequiredSheet(ss, QUEUE_SHEET);
+  const pageSheet = getRequiredSheet(ss, PAGE_SHEET);
   const values = queueSheet.getDataRange().getDisplayValues();
-  const headers = values[0] || [];
+  const headers = normalizeHeaders(values[0] || []);
   const rows = values.slice(1)
     .filter((row) => row.some(Boolean))
     .map((row) => rowToObject(headers, row))
@@ -103,9 +58,9 @@ function createRows(payload) {
   validatePayload(payload);
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(QUEUE_SHEET);
+  const sheet = getRequiredSheet(ss, QUEUE_SHEET);
   const values = sheet.getDataRange().getDisplayValues();
-  const headers = values[0];
+  const headers = normalizeHeaders(values[0] || []);
   const ids = getNextIds(values, headers);
   const contentId = ids.nextContentId;
   const fileInfo = uploadFile(payload.file);
@@ -137,6 +92,51 @@ function createRows(payload) {
   };
 }
 
+function updateRow(payload) {
+  validatePayload(payload);
+  if (!payload.row_id) {
+    throw new Error("row_id is required.");
+  }
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = getRequiredSheet(ss, QUEUE_SHEET);
+  const values = sheet.getDataRange().getDisplayValues();
+  const headers = normalizeHeaders(values[0] || []);
+  const rowIdIndex = headers.indexOf("row_id");
+  const targetIndex = values.findIndex((row, index) => index > 0 && String(row[rowIdIndex]) === String(payload.row_id));
+
+  if (targetIndex < 1) {
+    throw new Error("Row not found.");
+  }
+
+  const current = rowToObject(headers, values[targetIndex]);
+  if (!isEditableRow(current)) {
+    throw new Error("Only READY scheduled rows can be edited.");
+  }
+
+  const fileInfo = uploadFile(payload.file);
+  const item = {
+    ...current,
+    caption: payload.caption,
+    media_type: payload.media_type || fileInfo.mediaType || current.media_type || "text",
+    drive_file_id: fileInfo.id || current.drive_file_id || "",
+    link: fileInfo.url || current.link || "",
+    page_name: payload.page_names[0],
+    scheduled_at: payload.publish_mode === "NOW" ? "" : payload.scheduled_at,
+    timezone: TIMEZONE,
+    status: DEFAULT_STATUS,
+    publish_mode: payload.publish_mode
+  };
+
+  const rowValues = headers.map((header) => item[header] ?? "");
+  sheet.getRange(targetIndex + 1, 1, 1, headers.length).setValues([rowValues]);
+
+  return {
+    updated: true,
+    ...getQueueData()
+  };
+}
+
 function validatePayload(payload) {
   if (!payload.caption || !String(payload.caption).trim()) {
     throw new Error("Caption is required.");
@@ -159,8 +159,9 @@ function uploadFile(file) {
 
   const bytes = Utilities.base64Decode(file.base64);
   const blob = Utilities.newBlob(bytes, file.mimeType || "application/octet-stream", file.name || "upload");
-  const folder = DRIVE_FOLDER_ID ? DriveApp.getFolderById(DRIVE_FOLDER_ID) : DriveApp.getRootFolder();
-  const driveFile = folder.createFile(blob);
+  const driveFile = DRIVE_FOLDER_ID
+    ? DriveApp.getFolderById(DRIVE_FOLDER_ID).createFile(blob)
+    : DriveApp.createFile(blob);
   driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
   return {
@@ -202,4 +203,24 @@ function rowToObject(headers, row) {
     item[header] = row[index] || "";
     return item;
   }, {});
+}
+
+function normalizeHeaders(headers) {
+  return headers.map((header) => String(header || "").trim());
+}
+
+function normalizeValue(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function isEditableRow(row) {
+  return normalizeValue(row.publish_mode) === "SCHEDULED" && normalizeValue(row.status) === "READY";
+}
+
+function getRequiredSheet(ss, sheetName) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${sheetName}`);
+  }
+  return sheet;
 }
