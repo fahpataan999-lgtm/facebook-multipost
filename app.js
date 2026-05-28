@@ -23,9 +23,12 @@ const state = {
   nextContentId: "C001"
 };
 
+let editingRowId = null;
+
 const els = {
   form: document.querySelector("#queueForm"),
   caption: document.querySelector("#caption"),
+  mediaType: document.querySelector("#mediaType"),
   publishMode: document.querySelector("#publishMode"),
   scheduledAt: document.querySelector("#scheduledAt"),
   mediaFile: document.querySelector("#mediaFile"),
@@ -77,7 +80,7 @@ function renderRows() {
   els.nextIds.textContent = `${state.nextRowId} / ${state.nextContentId}`;
 
   if (!state.rows.length) {
-    els.queueBody.innerHTML = `<tr><td colspan="8" class="empty-state">ยังไม่มีข้อมูล หรือยังไม่ได้เชื่อมต่อ API</td></tr>`;
+    els.queueBody.innerHTML = `<tr><td colspan="9" class="empty-state">ยังไม่มีข้อมูล หรือยังไม่ได้เชื่อมต่อ API</td></tr>`;
     return;
   }
 
@@ -91,8 +94,15 @@ function renderRows() {
       <td>${escapeHtml(row.scheduled_at)}</td>
       <td>${escapeHtml(row.status)}</td>
       <td>${escapeHtml(row.publish_mode)}</td>
+      <td>${renderEditButton(row)}</td>
     </tr>
   `).join("");
+}
+
+function renderEditButton(row) {
+  const canEdit = row.publish_mode === "SCHEDULED" && row.status === "READY";
+  if (!canEdit) return "";
+  return `<button type="button" class="table-action" data-edit-row="${escapeHtml(row.row_id)}">แก้ไข</button>`;
 }
 
 function selectedPages() {
@@ -102,6 +112,11 @@ function selectedPages() {
 function toBangkokIso(datetimeLocal) {
   if (!datetimeLocal) return "";
   return `${datetimeLocal}:00+07:00`;
+}
+
+function toDateTimeLocal(isoText) {
+  const match = String(isoText || "").match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  return match ? `${match[1]}T${match[2]}` : "";
 }
 
 function inferMediaType(file) {
@@ -193,9 +208,10 @@ async function handleSubmit(event) {
   try {
     const fileBase64 = await readFileAsBase64(file);
     const payload = {
-      action: "create",
+      action: editingRowId ? "update" : "create",
+      row_id: editingRowId,
       caption: els.caption.value.trim(),
-      media_type: inferMediaType(file),
+      media_type: els.mediaType.value,
       scheduled_at: toBangkokIso(els.scheduledAt.value),
       publish_mode: els.publishMode.value,
       page_names: pages,
@@ -212,9 +228,11 @@ async function handleSubmit(event) {
     state.nextContentId = result.nextContentId || state.nextContentId;
     renderRows();
     els.form.reset();
+    editingRowId = null;
     renderPages();
     els.filePreview.textContent = "ยังไม่ได้เลือกไฟล์";
-    setMessage(`บันทึกสำเร็จ ${result.created || pages.length} บรรทัด`);
+    els.submitButton.textContent = "บันทึกลงชีต";
+    setMessage(result.updated ? "แก้ไขสำเร็จ" : `บันทึกสำเร็จ ${result.created || pages.length} บรรทัด`);
   } catch (error) {
     setMessage(error.message, true);
   } finally {
@@ -225,6 +243,12 @@ async function handleSubmit(event) {
 
 els.mediaFile.addEventListener("change", () => {
   const file = els.mediaFile.files[0];
+  if (file) {
+    const inferred = inferMediaType(file);
+    if (["photo", "video"].includes(inferred)) {
+      els.mediaType.value = inferred;
+    }
+  }
   els.filePreview.textContent = file ? `${file.name} · ${Math.ceil(file.size / 1024).toLocaleString()} KB` : "ยังไม่ได้เลือกไฟล์";
 });
 
@@ -235,6 +259,29 @@ els.toggleAllPages.addEventListener("click", () => {
     box.checked = shouldCheck;
   });
   els.toggleAllPages.textContent = shouldCheck ? "ยกเลิกทั้งหมด" : "เลือกทั้งหมด";
+});
+
+els.queueBody.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-row]");
+  if (!button) return;
+
+  const row = state.rows.find((item) => String(item.row_id) === String(button.dataset.editRow));
+  if (!row) return;
+
+  editingRowId = row.row_id;
+  els.caption.value = row.caption || "";
+  els.mediaType.value = row.media_type || "text";
+  els.publishMode.value = row.publish_mode || "SCHEDULED";
+  els.scheduledAt.value = toDateTimeLocal(row.scheduled_at);
+  els.mediaFile.value = "";
+  els.filePreview.textContent = row.drive_file_id ? `ใช้ไฟล์เดิม: ${row.drive_file_id}` : "ยังไม่ได้เลือกไฟล์";
+  renderPages();
+  document.querySelectorAll('input[name="page_name"]').forEach((input) => {
+    input.checked = input.value === row.page_name;
+  });
+  els.submitButton.textContent = "บันทึกการแก้ไข";
+  setMessage(`กำลังแก้ไข row ${row.row_id}`);
+  els.form.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 els.form.addEventListener("submit", handleSubmit);
