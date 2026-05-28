@@ -64,6 +64,14 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizeValue(value) {
+  return String(value ?? "").trim().toUpperCase();
+}
+
+function isEditableRow(row) {
+  return normalizeValue(row.publish_mode) === "SCHEDULED" && normalizeValue(row.status) === "READY";
+}
+
 function renderPages() {
   els.pageList.innerHTML = state.pages
     .map((page, index) => `
@@ -100,8 +108,7 @@ function renderRows() {
 }
 
 function renderEditButton(row) {
-  const canEdit = row.publish_mode === "SCHEDULED" && row.status === "READY";
-  if (!canEdit) return "";
+  if (!isEditableRow(row)) return "";
   return `<button type="button" class="table-action" data-edit-row="${escapeHtml(row.row_id)}">แก้ไข</button>`;
 }
 
