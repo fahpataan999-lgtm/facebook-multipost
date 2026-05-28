@@ -66,6 +66,14 @@
             <div>
               <span class="field-title">Media</span>
             </div>
+            <label class="field">
+              <span>Media type</span>
+              <select id="mediaType" name="media_type" required>
+                <option value="text">text</option>
+                <option value="photo">photo</option>
+                <option value="video">video</option>
+              </select>
+            </label>
             <label class="upload-action">
               <input id="mediaFile" name="media" type="file" accept="image/*,video/*" />
               <span>เลือกไฟล์</span>
@@ -90,7 +98,7 @@
             </div>
             <div>
               <span>Status</span>
-              <strong>DRAFT</strong>
+              <strong>READY</strong>
             </div>
           </div>
 
@@ -122,11 +130,12 @@
                   <th>schedule</th>
                   <th>status</th>
                   <th>mode</th>
+                  <th>edit</th>
                 </tr>
               </thead>
               <tbody id="queueBody">
                 <tr>
-                  <td colspan="8" class="empty-state">กำลังโหลดข้อมูล...</td>
+                  <td colspan="9" class="empty-state">กำลังโหลดข้อมูล...</td>
                 </tr>
               </tbody>
             </table>
