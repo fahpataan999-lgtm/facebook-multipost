@@ -52,7 +52,7 @@ function addContentBlock(values = {}) {
   block.dataset.uploadedIds = values.drive_file_id || "";
   block.dataset.uploadedLinks = values.link || "";
   block.innerHTML = `
-    <div class="content-block-head"><div><p class="eyebrow">Content block</p><h3>รายการที่ ${id}</h3></div><button type="button" class="icon-button remove-block" aria-label="ลบบล็อค">×</button></div>
+    <div class="content-block-head"><div><p class="eyebrow">New content</p><h3>รายการโพสต์ที่ ${id}</h3></div><button type="button" class="icon-button remove-block" aria-label="ลบ New content">×</button></div>
     <label class="field field-full"><span>Caption</span><textarea class="caption-input" rows="7" placeholder="วางข้อความโพสต์ที่นี่" required>${escapeHtml(values.caption || "")}</textarea></label>
     <div class="field-grid">
       <label class="field"><span>Publish mode</span><select class="publish-mode" required><option value="SCHEDULED" ${values.publish_mode !== "NOW" ? "selected" : ""}>SCHEDULED</option><option value="NOW" ${values.publish_mode === "NOW" ? "selected" : ""}>NOW</option></select></label>
