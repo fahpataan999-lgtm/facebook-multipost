@@ -268,6 +268,18 @@ input[type="datetime-local"]:focus {
   font-size: 1.15rem;
 }
 
+.table-action {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 button:hover,
 .upload-action span:hover {
   transform: translateY(-1px);
@@ -398,6 +410,29 @@ td {
   text-align: center;
 }
 
+.pagination-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination-controls strong {
+  min-width: 96px;
+  color: var(--ink);
+  text-align: center;
+}
+
 @media (max-width: 1100px) {
   .topbar,
   .workarea {
@@ -435,6 +470,16 @@ td {
   .secondary-button,
   .ghost-button {
     width: 100%;
+  }
+
+  .pagination-bar,
+  .pagination-controls {
+    display: grid;
+    width: 100%;
+  }
+
+  .pagination-controls {
+    grid-template-columns: 1fr;
   }
 
   textarea {
