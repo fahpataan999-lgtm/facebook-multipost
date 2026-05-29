@@ -17,18 +17,9 @@
           <h1>บันทึกคอนเทนต์ลงชีต</h1>
         </div>
         <div class="summary-grid" aria-live="polite">
-          <div class="summary-item">
-            <span>รายการทั้งหมด</span>
-            <strong id="totalRows">-</strong>
-          </div>
-          <div class="summary-item">
-            <span>เลขถัดไป</span>
-            <strong id="nextIds">-</strong>
-          </div>
-          <div class="summary-item">
-            <span>เวลา</span>
-            <strong>Asia/Bangkok</strong>
-          </div>
+          <div class="summary-item"><span>รายการทั้งหมด</span><strong id="totalRows">-</strong></div>
+          <div class="summary-item"><span>เลขถัดไป</span><strong id="nextIds">-</strong></div>
+          <div class="summary-item"><span>เวลา</span><strong>Asia/Bangkok</strong></div>
         </div>
       </section>
 
@@ -42,68 +33,24 @@
             <span class="status-pill" id="apiState">ยังไม่เชื่อมต่อ</span>
           </div>
 
-          <label class="field field-full">
-            <span>Caption</span>
-            <textarea id="caption" name="caption" rows="8" placeholder="วางข้อความโพสต์ที่นี่" required></textarea>
-          </label>
-
-          <div class="field-grid">
-            <label class="field">
-              <span>Publish mode</span>
-              <select id="publishMode" name="publish_mode" required>
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="NOW">NOW</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Scheduled at</span>
-              <input id="scheduledAt" name="scheduled_at" type="datetime-local" />
-            </label>
-          </div>
-
-          <div class="upload-box">
-            <div>
-              <span class="field-title">Media</span>
-            </div>
-            <label class="field">
-              <span>Media type</span>
-              <select id="mediaType" name="media_type" required>
-                <option value="text">text</option>
-                <option value="photo">photo</option>
-                <option value="video">video</option>
-              </select>
-            </label>
-            <label class="upload-action">
-              <input id="mediaFile" name="media" type="file" accept="image/*,video/*" />
-              <span>เลือกไฟล์</span>
-            </label>
-            <div id="filePreview" class="file-preview">ยังไม่ได้เลือกไฟล์</div>
-          </div>
+          <div id="contentBlocks" class="content-blocks"></div>
+          <button type="button" class="secondary-button add-block-button" id="addContentBlock">เพิ่มบล็อคคอนเทนต์</button>
 
           <section class="page-picker" aria-labelledby="pagePickerTitle">
             <div class="picker-head">
-              <div>
-                <span class="field-title" id="pagePickerTitle">Page name</span>
-              </div>
+              <div><span class="field-title" id="pagePickerTitle">Page name</span></div>
               <button class="ghost-button" type="button" id="toggleAllPages">เลือกทั้งหมด</button>
             </div>
             <div class="page-list" id="pageList"></div>
           </section>
 
           <div class="locked-fields">
-            <div>
-              <span>Timezone</span>
-              <strong>Asia/Bangkok</strong>
-            </div>
-            <div>
-              <span>Status</span>
-              <strong>READY</strong>
-            </div>
+            <div><span>Timezone</span><strong>Asia/Bangkok</strong></div>
+            <div><span>Status</span><strong>READY</strong></div>
           </div>
 
           <div class="form-actions">
-            <button type="button" class="secondary-button" id="refreshButton">รีเฟรชตาราง</button>
+            <button type="button" class="secondary-button" id="refreshButton">รีเฟรชรายการ</button>
             <button type="submit" class="primary-button" id="submitButton">บันทึกลงชีต</button>
           </div>
           <p class="form-message" id="formMessage" role="status"></p>
@@ -118,28 +65,8 @@
             <button type="button" class="icon-button" id="reloadTable" aria-label="โหลดรายการใหม่">↻</button>
           </div>
 
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>row</th>
-                  <th>content</th>
-                  <th>caption</th>
-                  <th>media</th>
-                  <th>page</th>
-                  <th>schedule</th>
-                  <th>status</th>
-                  <th>mode</th>
-                  <th>edit</th>
-                </tr>
-              </thead>
-              <tbody id="queueBody">
-                <tr>
-                  <td colspan="9" class="empty-state">กำลังโหลดข้อมูล...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <div class="queue-list" id="queueList"><div class="empty-state">กำลังโหลดข้อมูล...</div></div>
+
           <div class="pagination-bar" aria-label="แบ่งหน้ารายการที่บันทึกแล้ว">
             <span id="pageRange">0 / 0</span>
             <div class="pagination-controls">
@@ -151,6 +78,13 @@
         </section>
       </section>
     </main>
+
+    <div class="lightbox" id="mediaLightbox" aria-hidden="true">
+      <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="ดูสื่อ">
+        <button type="button" class="icon-button lightbox-close" id="closeLightbox" aria-label="ปิด">×</button>
+        <div class="lightbox-media" id="lightboxMedia"></div>
+      </div>
+    </div>
 
     <script src="./config.js"></script>
     <script src="./app.js"></script>
