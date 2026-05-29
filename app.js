@@ -75,7 +75,8 @@ function normalizeValue(value) {
 }
 
 function isEditableRow(row) {
-  return normalizeValue(row.publish_mode) === "SCHEDULED" && normalizeValue(row.status) === "READY";
+  const status = normalizeValue(row.status);
+  return normalizeValue(row.publish_mode) === "SCHEDULED" && ["READY", "SCHEDULED"].includes(status);
 }
 
 function renderPages() {
@@ -123,14 +124,19 @@ function renderRows() {
 function renderPagination(start, end, pageCount) {
   if (!els.pageRange || !els.pageIndicator || !els.prevPage || !els.nextPage) return;
 
-  els.pageRange.textContent = state.rows.length ? `${start}-${end} / ${state.rows.length}` : "0 / 0";
-  els.pageIndicator.textContent = state.rows.length ? `หน้า ${state.currentPage} / ${pageCount}` : "หน้า 0 / 0";
+  els.pageRange.textContent = state.rows.length
+    ? `${start}-${end} / ${state.rows.length}`
+    : "0 / 0";
+  els.pageIndicator.textContent = state.rows.length
+    ? `หน้า ${state.currentPage} / ${pageCount}`
+    : "หน้า 0 / 0";
   els.prevPage.disabled = state.currentPage <= 1 || !state.rows.length;
   els.nextPage.disabled = state.currentPage >= pageCount || !state.rows.length;
 }
 
 function renderEditButton(row) {
-  if (!isEditableRow(row)) return "";
+  const canEdit = isEditableRow(row);
+  if (!canEdit) return "";
   return `<button type="button" class="table-action" data-edit-row="${escapeHtml(row.row_id)}">แก้ไข</button>`;
 }
 
