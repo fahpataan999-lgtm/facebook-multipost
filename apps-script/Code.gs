@@ -9,7 +9,13 @@ function doPost(e) {
   try {
     const payload = JSON.parse(e.postData.contents || "{}");
     const action = payload.action || "list";
-    const result = action === "create" ? createRows(payload) : action === "update" ? updateRow(payload) : getQueueData();
+    const result = action === "create"
+      ? createRows(payload)
+      : action === "update"
+        ? updateRow(payload)
+        : action === "upload"
+          ? uploadOnly(payload)
+          : getQueueData();
     return jsonOutput({ ok: true, ...result });
   } catch (error) {
     return jsonOutput({ ok: false, error: error.message });
@@ -53,7 +59,8 @@ function createRows(payload) {
     validateEntry(entry, pageNames);
     const contentId = `C${String(contentNumber).padStart(3, "0")}`;
     contentNumber += 1;
-    const fileInfo = uploadFiles(entry.files || entry.file);
+    const fileInfo = uploadFiles(entry.uploaded_files || entry.files || entry.file);
+
     pageNames.forEach((pageName) => {
       const item = {
         row_id: rowId,
@@ -98,7 +105,7 @@ function updateRow(payload) {
   const current = rowToObject(headers, values[targetIndex]);
   if (!isEditableRow(current)) throw new Error("Only READY or SCHEDULED rows with SCHEDULED publish mode can be edited.");
 
-  const fileInfo = uploadFiles(entry.files || entry.file);
+  const fileInfo = uploadFiles(entry.uploaded_files || entry.files || entry.file);
   const item = {
     ...current,
     caption: entry.caption,
@@ -132,10 +139,25 @@ function validateEntry(entry, pageNames) {
   if (entry.media_type === "video" && Array.isArray(entry.files) && entry.files.length > 1) throw new Error("Video accepts only one file.");
 }
 
+function uploadOnly(payload) {
+  const fileInfo = uploadFiles(payload.files || payload.file);
+  return {
+    drive_file_id: fileInfo.ids || "",
+    link: fileInfo.urls || "",
+    media_type: fileInfo.mediaType || ""
+  };
+}
+
 function uploadFiles(files) {
   const fileList = Array.isArray(files) ? files : files ? [files] : [];
+  const existing = fileList.filter((file) => file && (file.id || file.url));
   const uploaded = fileList.filter((file) => file && file.base64).map((file) => uploadFile(file));
-  return { ids: uploaded.map((file) => file.id).join(","), urls: uploaded.map((file) => file.url).join(","), mediaType: uploaded[0] ? uploaded[0].mediaType : "" };
+  const allFiles = existing.concat(uploaded);
+  return {
+    ids: allFiles.map((file) => file.id).filter(Boolean).join(","),
+    urls: allFiles.map((file) => file.url).filter(Boolean).join(","),
+    mediaType: allFiles[0] ? allFiles[0].mediaType || "" : ""
+  };
 }
 
 function uploadFile(file) {
