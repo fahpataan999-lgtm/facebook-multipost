@@ -20,9 +20,11 @@ const state = {
   pages: FALLBACK_PAGES,
   rows: [],
   nextRowId: 1,
-  nextContentId: "C001"
+  nextContentId: "C001",
+  currentPage: 1
 };
 
+const PAGE_SIZE = 15;
 let editingRowId = null;
 
 const els = {
@@ -42,7 +44,11 @@ const els = {
   apiState: document.querySelector("#apiState"),
   formMessage: document.querySelector("#formMessage"),
   totalRows: document.querySelector("#totalRows"),
-  nextIds: document.querySelector("#nextIds")
+  nextIds: document.querySelector("#nextIds"),
+  pageRange: document.querySelector("#pageRange"),
+  pageIndicator: document.querySelector("#pageIndicator"),
+  prevPage: document.querySelector("#prevPage"),
+  nextPage: document.querySelector("#nextPage")
 };
 
 function setApiState(text, mode = "") {
@@ -89,10 +95,16 @@ function renderRows() {
 
   if (!state.rows.length) {
     els.queueBody.innerHTML = `<tr><td colspan="9" class="empty-state">ยังไม่มีข้อมูล หรือยังไม่ได้เชื่อมต่อ API</td></tr>`;
+    renderPagination(0, 0, 0);
     return;
   }
 
-  els.queueBody.innerHTML = state.rows.slice(0, 80).map((row) => `
+  const pageCount = Math.max(Math.ceil(state.rows.length / PAGE_SIZE), 1);
+  state.currentPage = Math.min(Math.max(state.currentPage, 1), pageCount);
+  const start = (state.currentPage - 1) * PAGE_SIZE;
+  const pageRows = state.rows.slice(start, start + PAGE_SIZE);
+
+  els.queueBody.innerHTML = pageRows.map((row) => `
     <tr>
       <td>${escapeHtml(row.row_id)}</td>
       <td>${escapeHtml(row.content_id)}</td>
@@ -105,6 +117,16 @@ function renderRows() {
       <td>${renderEditButton(row)}</td>
     </tr>
   `).join("");
+  renderPagination(start + 1, start + pageRows.length, pageCount);
+}
+
+function renderPagination(start, end, pageCount) {
+  if (!els.pageRange || !els.pageIndicator || !els.prevPage || !els.nextPage) return;
+
+  els.pageRange.textContent = state.rows.length ? `${start}-${end} / ${state.rows.length}` : "0 / 0";
+  els.pageIndicator.textContent = state.rows.length ? `หน้า ${state.currentPage} / ${pageCount}` : "หน้า 0 / 0";
+  els.prevPage.disabled = state.currentPage <= 1 || !state.rows.length;
+  els.nextPage.disabled = state.currentPage >= pageCount || !state.rows.length;
 }
 
 function renderEditButton(row) {
@@ -182,6 +204,7 @@ async function loadMeta() {
     state.rows = data.rows || [];
     state.nextRowId = data.nextRowId || 1;
     state.nextContentId = data.nextContentId || "C001";
+    state.currentPage = 1;
     renderPages();
     renderRows();
     setApiState("เชื่อมต่อแล้ว", "ready");
@@ -233,6 +256,9 @@ async function handleSubmit(event) {
     state.rows = result.rows || state.rows;
     state.nextRowId = result.nextRowId || state.nextRowId;
     state.nextContentId = result.nextContentId || state.nextContentId;
+    if (!result.updated) {
+      state.currentPage = 1;
+    }
     renderRows();
     els.form.reset();
     editingRowId = null;
@@ -294,5 +320,13 @@ els.queueBody.addEventListener("click", (event) => {
 els.form.addEventListener("submit", handleSubmit);
 els.refreshButton.addEventListener("click", loadMeta);
 els.reloadTable.addEventListener("click", loadMeta);
+els.prevPage.addEventListener("click", () => {
+  state.currentPage -= 1;
+  renderRows();
+});
+els.nextPage.addEventListener("click", () => {
+  state.currentPage += 1;
+  renderRows();
+});
 
 loadMeta();
