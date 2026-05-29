@@ -49,6 +49,8 @@ function addContentBlock(values = {}) {
   const block = document.createElement("section");
   block.className = "content-block";
   block.dataset.blockId = String(id);
+  block.dataset.uploadedIds = values.drive_file_id || "";
+  block.dataset.uploadedLinks = values.link || "";
   block.innerHTML = `
     <div class="content-block-head"><div><p class="eyebrow">Content block</p><h3>รายการที่ ${id}</h3></div><button type="button" class="icon-button remove-block" aria-label="ลบบล็อค">×</button></div>
     <label class="field field-full"><span>Caption</span><textarea class="caption-input" rows="7" placeholder="วางข้อความโพสต์ที่นี่" required>${escapeHtml(values.caption || "")}</textarea></label>
@@ -60,6 +62,7 @@ function addContentBlock(values = {}) {
       <label class="field"><span>Media type</span><select class="media-type" required><option value="text" ${values.media_type === "text" || !values.media_type ? "selected" : ""}>text</option><option value="photo" ${values.media_type === "photo" ? "selected" : ""}>photo</option><option value="video" ${values.media_type === "video" ? "selected" : ""}>video</option></select></label>
       <label class="upload-action"><input class="media-file" type="file" accept="image/*,video/*" /><span>เลือกไฟล์</span></label>
       <div class="file-preview">${values.drive_file_id ? `ใช้ไฟล์เดิม: ${escapeHtml(values.drive_file_id)}` : "ยังไม่ได้เลือกไฟล์"}</div>
+      <label class="field"><span>drive_file_id</span><input class="drive-file-id" type="text" value="${escapeHtml(values.drive_file_id || "")}" readonly /></label>
     </div>`;
   els.contentBlocks.appendChild(block);
   syncMediaInput(block);
@@ -97,12 +100,46 @@ async function collectEntries() {
     const scheduledAt = block.querySelector(".scheduled-at").value;
     const mediaType = block.querySelector(".media-type").value;
     const files = Array.from(block.querySelector(".media-file").files || []);
+    const uploadedIds = block.dataset.uploadedIds || "";
+    const uploadedLinks = block.dataset.uploadedLinks || "";
     if (!caption) throw new Error("กรุณากรอก Caption ให้ครบทุกบล็อค");
     if (publishMode === "SCHEDULED" && !scheduledAt) throw new Error("กรุณาเลือกวันเวลาให้รายการ SCHEDULED");
     if (mediaType === "video" && files.length > 1) throw new Error("วิดีโอเลือกได้ครั้งละ 1 ไฟล์");
-    entries.push({ caption, media_type: mediaType, scheduled_at: toBangkokIso(scheduledAt), publish_mode: publishMode, files: await filesToPayloads(mediaType === "photo" ? files : files.slice(0, 1)) });
+    entries.push({
+      caption,
+      media_type: mediaType,
+      scheduled_at: toBangkokIso(scheduledAt),
+      publish_mode: publishMode,
+      uploaded_ids: uploadedIds,
+      uploaded_links: uploadedLinks,
+      uploaded_files: uploadedIds ? uploadedIds.split(",").map((fileId, index) => ({ id: fileId.trim(), url: (uploadedLinks.split(",")[index] || "").trim(), mediaType })) : [],
+      files: uploadedIds ? [] : await filesToPayloads(mediaType === "photo" ? files : files.slice(0, 1))
+    });
   }
   return entries;
+}
+
+async function uploadSelectedFiles(block, files) {
+  const mediaType = block.querySelector(".media-type").value;
+  const driveInput = block.querySelector(".drive-file-id");
+  const preview = block.querySelector(".file-preview");
+  if (!files.length) {
+    block.dataset.uploadedIds = "";
+    block.dataset.uploadedLinks = "";
+    driveInput.value = "";
+    return;
+  }
+  if (!API_URL) {
+    preview.textContent = "ยังไม่ได้ตั้งค่า API จึงยังอัปโหลดไม่ได้";
+    return;
+  }
+  preview.textContent = "กำลังอัปโหลดไฟล์...";
+  const payloadFiles = await filesToPayloads(mediaType === "photo" ? files : files.slice(0, 1));
+  const result = await apiRequest({ action: "upload", files: payloadFiles });
+  block.dataset.uploadedIds = result.drive_file_id || "";
+  block.dataset.uploadedLinks = result.link || "";
+  driveInput.value = result.drive_file_id || "";
+  preview.textContent = result.drive_file_id ? `อัปโหลดแล้ว: ${result.drive_file_id}` : "อัปโหลดแล้ว แต่ไม่พบ ID ไฟล์";
 }
 
 async function apiRequest(payload) {
@@ -136,7 +173,31 @@ function getMediaItems(row) { const ids = String(row.drive_file_id || "").split(
 function openLightbox(row) { const items = getMediaItems(row); els.lightboxMedia.innerHTML = items.length ? items.map((item) => { const preview = item.id ? `https://drive.google.com/file/d/${encodeURIComponent(item.id)}/preview` : item.link; return `<div class="lightbox-item"><iframe src="${escapeHtml(preview)}" allow="autoplay" loading="lazy"></iframe>${item.link ? `<a href="${escapeHtml(item.link)}" target="_blank" rel="noreferrer">เปิดไฟล์ต้นฉบับ</a>` : ""}</div>`; }).join("") : `<div class="empty-state">ไม่มีสื่อสำหรับรายการนี้</div>`; els.lightbox.classList.add("open"); els.lightbox.setAttribute("aria-hidden", "false"); }
 function closeLightbox() { els.lightbox.classList.remove("open"); els.lightbox.setAttribute("aria-hidden", "true"); els.lightboxMedia.innerHTML = ""; }
 
-els.contentBlocks.addEventListener("change", (event) => { const block = event.target.closest(".content-block"); if (!block) return; if (event.target.matches(".media-type")) { syncMediaInput(block); block.querySelector(".media-file").value = ""; block.querySelector(".file-preview").textContent = "ยังไม่ได้เลือกไฟล์"; } if (event.target.matches(".media-file")) { const files = Array.from(event.target.files || []); const mediaType = block.querySelector(".media-type").value; if (mediaType === "video" && files.length > 1) { event.target.value = ""; block.querySelector(".file-preview").textContent = "วิดีโอเลือกได้ 1 ไฟล์"; return; } block.querySelector(".file-preview").textContent = files.length ? files.map((file) => `${file.name} (${Math.ceil(file.size / 1024).toLocaleString()} KB)`).join(", ") : "ยังไม่ได้เลือกไฟล์"; } });
+els.contentBlocks.addEventListener("change", async (event) => {
+  const block = event.target.closest(".content-block");
+  if (!block) return;
+  if (event.target.matches(".media-type")) {
+    syncMediaInput(block);
+    block.querySelector(".media-file").value = "";
+    block.dataset.uploadedIds = "";
+    block.dataset.uploadedLinks = "";
+    block.querySelector(".drive-file-id").value = "";
+    block.querySelector(".file-preview").textContent = "ยังไม่ได้เลือกไฟล์";
+  }
+  if (event.target.matches(".media-file")) {
+    const files = Array.from(event.target.files || []);
+    const mediaType = block.querySelector(".media-type").value;
+    if (mediaType === "video" && files.length > 1) { event.target.value = ""; block.querySelector(".file-preview").textContent = "วิดีโอเลือกได้ 1 ไฟล์"; return; }
+    block.querySelector(".file-preview").textContent = files.length ? files.map((file) => `${file.name} (${Math.ceil(file.size / 1024).toLocaleString()} KB)`).join(", ") : "ยังไม่ได้เลือกไฟล์";
+    try { await uploadSelectedFiles(block, files); }
+    catch (error) {
+      block.dataset.uploadedIds = "";
+      block.dataset.uploadedLinks = "";
+      block.querySelector(".drive-file-id").value = "";
+      block.querySelector(".file-preview").textContent = error.message;
+    }
+  }
+});
 els.contentBlocks.addEventListener("click", (event) => { const removeButton = event.target.closest(".remove-block"); if (!removeButton || removeButton.disabled) return; removeButton.closest(".content-block").remove(); updateRemoveButtons(); });
 els.addContentBlock.addEventListener("click", () => { addContentBlock(); updateRemoveButtons(); });
 els.toggleAllPages.addEventListener("click", () => { const boxes = Array.from(document.querySelectorAll('input[name="page_name"]')); const shouldCheck = boxes.some((box) => !box.checked); boxes.forEach((box) => { box.checked = shouldCheck; }); els.toggleAllPages.textContent = shouldCheck ? "ยกเลิกทั้งหมด" : "เลือกทั้งหมด"; });
