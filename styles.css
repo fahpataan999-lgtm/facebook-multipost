@@ -27,9 +27,9 @@ h3 { font-size: 1.05rem; }
 .summary-item { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 255, 255, 0.72); }
 .summary-item span { display: block; color: var(--muted); font-size: 0.8rem; }
 .summary-item strong { display: block; margin-top: 2px; overflow-wrap: anywhere; }
-.workarea { display: grid; grid-template-columns: minmax(360px, 520px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.workarea { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start; }
 .entry-panel, .table-panel { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow); }
-.entry-panel { position: sticky; top: 20px; display: grid; gap: 18px; padding: 20px; }
+.entry-panel { position: static; display: grid; gap: 18px; padding: 20px; }
 .table-panel { min-width: 0; padding: 20px; }
 .panel-heading, .picker-head, .form-actions, .locked-fields { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .status-pill { max-width: 180px; padding: 7px 10px; border-radius: 999px; background: #f3f5ef; color: var(--muted); font-size: 0.8rem; font-weight: 700; text-align: center; }
