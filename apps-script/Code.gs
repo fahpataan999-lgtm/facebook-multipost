@@ -111,7 +111,7 @@ function updateRow(payload) {
 
   const current = rowToObject(headers, values[targetIndex]);
   if (!isEditableRow(current)) {
-    throw new Error("Only READY scheduled rows can be edited.");
+    throw new Error("Only READY or SCHEDULED rows with SCHEDULED publish mode can be edited.");
   }
 
   const fileInfo = uploadFile(payload.file);
@@ -214,7 +214,8 @@ function normalizeValue(value) {
 }
 
 function isEditableRow(row) {
-  return normalizeValue(row.publish_mode) === "SCHEDULED" && normalizeValue(row.status) === "READY";
+  const status = normalizeValue(row.status);
+  return normalizeValue(row.publish_mode) === "SCHEDULED" && ["READY", "SCHEDULED"].includes(status);
 }
 
 function getRequiredSheet(ss, sheetName) {
