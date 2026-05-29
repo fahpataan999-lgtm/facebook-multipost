@@ -43,10 +43,10 @@ h3 { font-size: 1.05rem; }
 .content-block { display: grid; gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcf9; }
 .content-block-head { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
 .add-block-button { width: 100%; }
-textarea, select, input[type="datetime-local"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: #fbfcf9; color: var(--ink); outline: none; }
+textarea, select, input[type="datetime-local"], input[type="text"] { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 8px; background: #fbfcf9; color: var(--ink); outline: none; }
 textarea { resize: vertical; min-height: 160px; padding: 12px; line-height: 1.6; }
-select, input[type="datetime-local"] { height: 44px; padding: 0 12px; }
-textarea:focus, select:focus, input[type="datetime-local"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(15, 139, 117, 0.14); }
+select, input[type="datetime-local"], input[type="text"] { height: 44px; padding: 0 12px; }
+textarea:focus, select:focus, input[type="datetime-local"]:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(15, 139, 117, 0.14); }
 .upload-box, .page-picker { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcf9; }
 .content-block .upload-box { background: #fff; }
 .upload-action input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
