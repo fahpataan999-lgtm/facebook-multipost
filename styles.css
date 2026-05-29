@@ -31,7 +31,8 @@ h3 { font-size: 1.05rem; }
 .entry-panel, .table-panel { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: var(--shadow); }
 .entry-panel { position: static; display: grid; gap: 18px; padding: 20px; }
 .table-panel { min-width: 0; padding: 20px; }
-.panel-heading, .picker-head, .form-actions, .locked-fields { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.panel-heading, .panel-tools, .picker-head, .form-actions, .locked-fields { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.panel-tools { justify-content: flex-end; }
 .status-pill { max-width: 180px; padding: 7px 10px; border-radius: 999px; background: #f3f5ef; color: var(--muted); font-size: 0.8rem; font-weight: 700; text-align: center; }
 .status-pill.ready { background: var(--accent-soft); color: var(--accent-dark); }
 .status-pill.warn { background: #fff4dc; color: var(--warn); }
@@ -92,4 +93,4 @@ button:disabled { cursor: not-allowed; opacity: 0.55; transform: none; }
 .lightbox-item iframe { width: 100%; min-height: 520px; border: 1px solid var(--line); border-radius: 8px; background: #f5f7fa; }
 .lightbox-item a { color: var(--accent-dark); font-weight: 700; }
 @media (max-width: 1100px) { .topbar, .workarea { grid-template-columns: 1fr; } .entry-panel { position: static; } .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .queue-card { grid-template-columns: 1fr; } .queue-actions { justify-content: stretch; } .queue-actions .table-action { flex: 1; } }
-@media (max-width: 720px) { .app-shell { padding: 16px; } .summary-grid, .field-grid, .locked-fields, .form-actions, .picker-head { grid-template-columns: 1fr; display: grid; } .panel-heading { align-items: start; } .primary-button, .secondary-button, .ghost-button, .queue-actions .table-action { width: 100%; } .pagination-bar, .pagination-controls { display: grid; width: 100%; } .pagination-controls { grid-template-columns: 1fr; } textarea { min-height: 150px; } .lightbox { padding: 12px; } .lightbox-item iframe { min-height: 360px; } }
+@media (max-width: 720px) { .app-shell { padding: 16px; } .summary-grid, .field-grid, .locked-fields, .form-actions, .picker-head { grid-template-columns: 1fr; display: grid; } .panel-heading { align-items: start; } .panel-tools { width: 100%; } .primary-button, .secondary-button, .ghost-button, .queue-actions .table-action { width: 100%; } .pagination-bar, .pagination-controls { display: grid; width: 100%; } .pagination-controls { grid-template-columns: 1fr; } textarea { min-height: 150px; } .lightbox { padding: 12px; } .lightbox-item iframe { min-height: 360px; } }
